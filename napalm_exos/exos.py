@@ -122,20 +122,24 @@ class ExosDriver(NetworkDriver):
 
         if optional_args is None:
             optional_args = {}
+    '''
 
     def open(self):
-        """Implementation of NAPALM method open."""
-        self.device = ConnectHandler(
-            device_type='extreme',
-            ip=self.hostname,
-            username=self.username,
-            password=self.password,
-            **self.optional_args)
+        """Open a connection to the device."""
+        device_type = "extreme"
+        if self.transport == "telnet":
+            device_type = "extreme_telnet"
+        self.device = self._netmiko_open(
+            device_type, netmiko_optional_args=self.netmiko_optional_args
+        )
 
     def close(self):
-        """Implementation of NAPALM method close.
-        """
-        self.device.disconnect()
+        """Implementation of NAPALM method close."""
+        self.device.close()
+
+    def is_alive(self):
+        """Implementation of NAPALM method is_alive."""
+        return self.device.is_alive()
 
     def get_config(self, retrieve='all'):
 
