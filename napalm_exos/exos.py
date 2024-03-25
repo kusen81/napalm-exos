@@ -36,6 +36,7 @@ import os
 import uuid
 import tempfile
 import jinja2
+import re
 
 logging.basicConfig()
 
