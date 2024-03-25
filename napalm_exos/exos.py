@@ -292,8 +292,13 @@ class ExosDriver(NetworkDriver):
         #                "temperature": float(match[-1]),
         #            }
 
-        # Mem
         environment.setdefault("memory", {})
+        environment.setdefault("fans", {})
+        environment.setdefault("power", {})
+        environment.setdefault("temperature", {})
+        environment.setdefault("cpu", {})
+
+        # Mem
         mem_total = re.search(r"Total.*:\s(\d+)", mem_cmd)
         mem_free = re.search(r"Free.*:\s(\d+)", mem_cmd)
         if mem_total and mem_free:
