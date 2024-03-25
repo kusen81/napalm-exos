@@ -18,7 +18,16 @@ Napalm driver for Extreme EXOS.
 Read https://napalm.readthedocs.io for more information.
 """
 from napalm.base.base import NetworkDriver
-from napalm.base.utils import py23_compat
+from napalm.base.netmiko_helpers import netmiko_args
+from napalm.base.exceptions import (
+    ConnectionException,
+    MergeConfigException,
+    ReplaceConfigException,
+    )
+
+# Removed because of ImportError: cannot import name 'py23_compat' from 'napalm.base.utils'
+#from napalm.base.utils import py23_compat
+
 from netmiko import ConnectHandler, SCPConn
 from napalm.base.helpers import textfsm_extractor
 
