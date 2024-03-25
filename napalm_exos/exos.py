@@ -216,17 +216,161 @@ class ExosDriver(NetworkDriver):
     def get_bgp_neighbors_detail(self, neighbor_address=u''):
         pass
 
-    def get_environment(self):
-        pass
 
+    def get_environment(self):
+        """
+        Return environment details.
+
+        Sample output:
+        {
+            "cpu": {
+                "0": {
+                    "%usage": 18.0
+                }
+            },
+            "fans": {
+                "FAN1": {
+                    "status": true
+                }
+            },
+            "memory": {
+                "available_ram": 3884224,
+                "used_ram": 784552
+            },
+            "power": {
+                "PWR1": {
+                    "capacity": 600.0,
+                    "output": 92.0,
+                    "status": true
+                }
+            },
+            "temperature": {
+                "CPU": {
+                    "is_alert": false,
+                    "is_critical": false,
+                    "temperature": 45.0
+                }
+            }
+        }
+        """
+        environment = {}
+
+        mem_cmd = "show memory"
+        #fan_output = self.device.send_command(fan_cmd)
+        #power_cmd = self.device.send_command(power_cmd)
+        #temp_cmd = self.device.send_command(temp_cmd)
+        #cpu_cmd = self.device.send_command(cpu_cmd)
+        mem_cmd = self.device.send_command(mem_cmd)
+
+        #environment.setdefault("fans", {})
+        #for i in fan_output.split("\n"):
+        #    match = re.match(r"\s+(\d+).+(Normal|Abnormal).+", i)
+        #    if match:
+        #        slot = match.group(1)
+        #        status = True if match.group(2) == "Normal" else False
+        #        environment["fans"][slot] = {"status": status}
+
+        #environment.setdefault("power", {})
+        #for i in power_cmd.split("\n"):
+        #    # match = re.match(r"\s+(\d+).+(Normal|Abnormal).+", i)
+        #    match = re.match(r"\s+(\d+)\s+(\w+\d+)\s+(\w+).+\s+(\w+)\s+(\d+\.\d+)", i)
+        #    if match:
+        #        environment["power"][f"{match.group(2)}-{match.group(1)}"] = {
+        #            "capacity": float(match.group(5)),
+        #            "output": None,
+        #            "status": True if match.group(4) == "Supply" else False,
+        #        }
+
+        #environment.setdefault("temperature", {})
+        #for i in temp_cmd.split("\n"):
+        #    match = re.split("\s+", i)
+        #    if len(match) == 10:
+        #        if "Upper" not in match:
+        #            environment["temperature"]["slot" + match[1]] = {
+        #                "is_alert": False if match[4] == "Normal" else True,
+        #                "is_critical": False if match[4] == "Normal" else True,
+        #                "temperature": float(match[-1]),
+        #            }
+
+        # Mem
+        environment.setdefault("memory", {})
+        mem_total = re.search(r"Total.*:\s(\d+)", mem_cmd)
+        mem_free = re.search(r"Free.*:\s(\d+)", mem_cmd)
+        if mem_total and mem_free:
+            environment["memory"] = {
+                "available_ram": int(mem_free.group(1)),
+                "used_ram": int(mem_total.group(1)) - int(mem_free.group(1))
+            }
+        else:
+            return False
+
+        return environment
+
+    # Cred to nicko170/napalm-exos
     def get_facts(self):
-        pass
+        commands = ['show switch', 'show version']
+        result = self.cli(commands)
+        show_switch = result['show switch']
+
+        hostname = ""
+        hostname_match = re.search("SysName:\s+(.*?)\n", show_switch)
+        if hostname_match:
+            hostname = hostname_match.group(1)
+
+        model = ""
+        model_match = re.search("System Type:\s+(.*?)\n", show_switch)
+        if model_match:
+            model = model_match.group(1)
+
+
+        show_version = result['show version']
+        serial_number = ""
+        version = ""
+        serial_match = re.search("Switch\s+:\s(.*?)\s(.*?)\sRev(.*?)IMG:\s(.*?)\n", show_version)
+        if serial_match:
+            serial_number = serial_match.group(2)
+            version = serial_match.group(4)
+
+
+        return {
+                "hostname": hostname.strip(),
+                "vendor": "Extreme Networks",
+                "model": model.strip(),
+                "os_version": version.strip(),
+                'serial_number': serial_number.strip(),
+                }
 
     def get_firewall_policies(self):
         pass
 
+    # Cred to nicko170/napalm-exos
     def get_interfaces(self):
-        pass
+        interfaces = {}
+        commands = ['show port information detail']
+        result = self.cli(commands)
+        show_port = result['show port information detail']
+        fsm = textfsm.TextFSM(open(str(pathlib.Path(__file__).parent.absolute()) + "/templates/exos_show_port_information_detail.textfsm"))
+        result = fsm.ParseText(show_port)
+
+        for line in result:
+            speed = 0
+            if line[1] == '100M': speed = 100
+            if line[1] == '1G': speed = 1000
+            if line[1] == '10G': speed = 10000
+            if line[1] == '25G': speed = 25000
+            if line[1] == '40G': speed = 40000
+            if line[1] == '100G': speed = 100000
+            interfaces[line[0]] = {
+                   'is_up': False,
+                   'is_enabled': False,
+                   'description': '',
+                   'last_flapped': -1,
+                   'speed': speed,
+                   'mtu': '',
+                   'mac_address': '',
+                   }
+
+        return interfaces
 
     def get_interfaces_counters(self):
         pass
