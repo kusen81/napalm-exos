@@ -44,6 +44,72 @@ logging.basicConfig()
 class ExosDriver(NetworkDriver):
     """Napalm driver for Extreme Networks EXOS."""
 
+    def __init__(self, hostname, username, password, timeout=60, optional_args=None):
+        """Constructor.
+        :param hostname:
+        :param username:
+        :param password:
+        :param timeout:
+        :param optional_args:
+        """
+        self.device = None
+        self.hostname = hostname
+        self.username = username
+        self.password = password
+        self.timeout = timeout
+
+        if optional_args is None:
+            optional_args = {}
+
+        # Netmiko possible arguments
+        netmiko_argument_map = {
+            "port": None,
+            "verbose": False,
+            "timeout": self.timeout,
+            "global_delay_factor": 1,
+            "use_keys": False,
+            "key_file": None,
+            "ssh_strict": False,
+            "system_host_keys": False,
+            "alt_host_keys": False,
+            "alt_key_file": "",
+            "ssh_config_file": None,
+            "allow_agent": False,
+            "keepalive": 30,
+        }
+
+        # Build dict of any optional Netmiko args
+        self.netmiko_optional_args = {
+            k: optional_args.get(k, v) for k, v in netmiko_argument_map.items()
+        }
+
+        self.transport = optional_args.get("transport", "ssh")
+        self.port = optional_args.get("port", 22)
+
+        self.changed = False
+        self.loaded = False
+        self.backup_file = ""
+        self.replace = False
+        self.merge_candidate = ""
+        self.replace_file = ""
+        self.profile = ["extreme"]
+
+        # netmiko args
+        self.netmiko_optional_args = netmiko_args(optional_args)
+
+        # Set the default port if not set
+        default_port = {"ssh": 22, "telnet": 23}
+        self.netmiko_optional_args.setdefault("port", default_port[self.transport])
+
+        # Control automatic execution of 'file prompt quiet' for file operations
+        self.auto_file_prompt = optional_args.get("auto_file_prompt", True)
+
+        # Track whether 'file prompt quiet' has been changed by NAPALM.
+        self.prompt_quiet_changed = False
+        # Track whether 'file prompt quiet' is known to be configured
+        self.prompt_quiet_configured = None
+
+    '''
     def __init__(self, hostname, username, password, timeout=60,
                  optional_args={}):
         """Constructor."""
