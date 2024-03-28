@@ -338,11 +338,14 @@ class ExosDriver(NetworkDriver):
 
 
         return {
-                "hostname": hostname.strip(),
+                "uptime": None,
                 "vendor": "Extreme Networks",
-                "model": model.strip(),
                 "os_version": version.strip(),
                 'serial_number': serial_number.strip(),
+                "model": model.strip(),
+                "hostname": hostname.strip(),
+                "fqdn": None,
+                "interface_list": []
                 }
 
     def get_firewall_policies(self):
